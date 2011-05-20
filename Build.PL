@@ -13,6 +13,7 @@ my $builder = Module::Build->new(
     requires => {
         'version'    => 0,
     },
+    create_readme=>1,
     create_makefile_pl => 'traditional',
     add_to_cleanup      => [ 'Test-Copyright-*' ],
 );
