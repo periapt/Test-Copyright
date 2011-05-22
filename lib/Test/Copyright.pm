@@ -4,14 +4,7 @@ use warnings;
 use strict;
 use Carp;
 
-use version; our $VERSION = qv('0.0.1');
-
-# Other recommended modules (uncomment to use):
-#  use IO::Prompt;
-#  use Perl6::Export;
-#  use Perl6::Slurp;
-#  use Perl6::Say;
-
+use version; our $VERSION = qv('0.1');
 
 # Module implementation here
 
@@ -21,29 +14,31 @@ __END__
 
 =head1 NAME
 
-Test::Copyright - [One line description of module's purpose here]
-
+Test::Copyright - Test that a module has good license information
 
 =head1 VERSION
 
-This document describes Test::Copyright version 0.0.1
-
+This document describes Test::Copyright version 0.1
 
 =head1 SYNOPSIS
 
     use Test::Copyright;
 
-=for author to fill in:
-    Brief code example(s) here showing commonest usage(s).
-    This section will be as far as many users bother reading
-    so make it as educational and exeplary as possible.
-  
-  
 =head1 DESCRIPTION
 
-=for author to fill in:
-    Write a full description of the module and its features here.
-    Use subsections (=head2, =head3) as appropriate.
+This module attempts to check the quality of a module from the copyright
+and open source license perspectives. The following tests are applied
+
+=over
+
+=item The license and authors are determined using L<CPAN::Meta>.
+
+=item The README file is required to contain the copyright and license
+statement generated from L<Software::License>.
+
+=item The README file is also parsed for exceptions.
+
+=item Each file is checked for consistency against this spec.
 
 
 =head1 INTERFACE 
