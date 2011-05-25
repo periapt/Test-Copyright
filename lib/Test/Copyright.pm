@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use Carp;
 
-use version; our $VERSION = qv('0.1');
+use version; our $VERSION = '0.1';
 
 # Module implementation here
 
@@ -40,6 +40,7 @@ statement generated from L<Software::License>.
 
 =item Each file is checked for consistency against this spec.
 
+=back
 
 =head1 INTERFACE 
 
