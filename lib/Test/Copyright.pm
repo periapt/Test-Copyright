@@ -3,11 +3,34 @@ package Test::Copyright;
 use warnings;
 use strict;
 use Carp;
+use 5.008;
+
+use Test::Builder;
 
 use version; our $VERSION = '0.1';
 
 # Module implementation here
 
+my $Test = Test::Builder->new;
+
+sub import {
+    my $self = shift;
+    my $caller = caller;
+
+    for my $func ( qw( copyright_ok ) ) {
+        no strict 'refs'; ## no critic
+        *{$caller."::".$func} = \&$func;
+    }
+
+    $Test->exported_to($caller);
+    $Test->plan(@_);
+}
+
+sub copyright_ok {
+    my $name = @_ ? shift : "Copyright test";
+    $Test->ok(1, $name);
+    return;
+}
 
 1; # Magic true value required at end of module
 __END__
@@ -44,12 +67,9 @@ statement generated from L<Software::License>.
 
 =head1 INTERFACE 
 
-=for author to fill in:
-    Write a separate section listing the public components of the modules
-    interface. These normally consist of either subroutines that may be
-    exported, or methods that may be called on objects belonging to the
-    classes provided by the module.
+=head2 copyright_ok
 
+This method does all the tests described above.
 
 =head1 DIAGNOSTICS
 
@@ -126,11 +146,14 @@ Please report any bugs or feature requests to
 C<bug-test-copyright@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
+=head1 ACKNOWLEDGEMENTS
+
+I have to express my gratitude to (or possibly annoyance with) ingydotnet
+for provoking me into writing this module.
 
 =head1 AUTHOR
 
 Nicholas Bamber  C<< <nicholas@periapt.co.uk> >>
-
 
 =head1 LICENCE AND COPYRIGHT
 
