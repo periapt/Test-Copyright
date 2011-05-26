@@ -6,18 +6,20 @@ use Carp;
 use 5.008;
 
 use Test::Builder;
+use CPAN::Meta;
 
 use version; our $VERSION = '0.1';
 
 # Module implementation here
 
 my $Test = Test::Builder->new;
+my %copyright_data = ();
 
 sub import {
     my $self = shift;
     my $caller = caller;
 
-    for my $func ( qw( copyright_ok ) ) {
+    for my $func ( qw( copyright_ok copyright_meta) ) {
         no strict 'refs'; ## no critic
         *{$caller."::".$func} = \&$func;
     }
@@ -28,8 +30,17 @@ sub import {
 
 sub copyright_ok {
     my $name = @_ ? shift : "Copyright test";
-    $Test->ok(1, $name);
+    ($copyright_data{authors}, $copyright_data{licenses}) = copyright_meta();
     return;
+}
+
+sub copyright_meta {
+    my $meta = CPAN::Meta->load_file('META.json');
+    my @authors = $meta->authors;
+    $Test->ok(length @authors > 0, "more than zero authors");
+    my @licenses = $meta->licenses;
+    $Test->ok(length @licenses > 0, "more than zero licenses");
+    return (\@authors, \@licenses);
 }
 
 1; # Magic true value required at end of module
@@ -70,6 +81,12 @@ statement generated from L<Software::License>.
 =head2 copyright_ok
 
 This method does all the tests described above.
+
+=head2 copyright_meta
+
+This method returns the author and license as read from the module
+META data. It also runs the basic check that there is at least one
+of each.
 
 =head1 DIAGNOSTICS
 

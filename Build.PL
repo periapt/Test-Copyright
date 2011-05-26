@@ -11,7 +11,8 @@ my $builder = Module::Build->new(
         'Test::More' => 0,
     },
     requires => {
-        'version'    => 0,
+        'version'       => 0,
+        'CPAN::Meta'    => 0,
     },
     configure_requires => {
         'Module::Build' => '0.38',
