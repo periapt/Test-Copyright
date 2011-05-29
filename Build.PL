@@ -13,6 +13,10 @@ my $builder = Module::Build->new(
     requires => {
         'version'       => 0,
         'CPAN::Meta'    => 0,
+        'Software::LicenseUtils' => 0,
+        'Perl6::Slurp'  => 0,
+        'Readonly'      => 0,
+        'UNIVERSAL::require' => 0,
     },
     configure_requires => {
         'Module::Build' => '0.38',

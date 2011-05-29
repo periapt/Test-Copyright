@@ -6,11 +6,19 @@ use Carp;
 use 5.008;
 
 use Test::Builder;
+use Test::More;
 use CPAN::Meta;
+use Software::LicenseUtils;
+use Readonly;
+use Perl6::Slurp;
+use UNIVERSAL::require;
 
 use version; our $VERSION = '0.1';
 
 # Module implementation here
+
+Readonly my @META_FILES => ('META.yml','META.json');
+Readonly my $DUMMY_COPYRIGHT => 'XYZ';
 
 my $Test = Test::Builder->new;
 my %copyright_data = ();
@@ -19,7 +27,7 @@ sub import {
     my $self = shift;
     my $caller = caller;
 
-    for my $func ( qw( copyright_ok copyright_meta) ) {
+    for my $func ( qw( copyright_ok cpan_meta_ok copyright_licenses_ok) ) {
         no strict 'refs'; ## no critic
         *{$caller."::".$func} = \&$func;
     }
@@ -30,18 +38,52 @@ sub import {
 
 sub copyright_ok {
     my $name = @_ ? shift : "Copyright test";
-    ($copyright_data{authors}, $copyright_data{licenses}) = copyright_meta();
+    my $meta = cpan_meta_ok();
+    if ($meta) {
+        my @classes = Software::LicenseUtils->guess_license_from_meta($meta);
+        $Test->ok(length @classes > 0, "more than zero licenses");
+        my $all_valid = 1;
+        my @licenses;
+        foreach my $class (@classes) {
+            if (defined $class) {
+                if ($class->require) {
+                    my $license = $class->new({holder=>$DUMMY_COPYRIGHT});
+                    if ($license and $license->isa($class)) {
+                        push @licenses, $license;
+                    }
+                    else {
+                        $all_valid = 0;
+                    }
+                }
+                else {
+                    $all_valid = 0;
+                }
+            }
+            else {
+                $all_valid = 0;
+            }
+        }
+        $Test->ok($all_valid, 'Found a bad license object');
+    }
+    else {
+        $Test->skip('No CPAN::Meta object', 2);
+    }
+
     return;
 }
 
-sub copyright_meta {
-    my $meta = CPAN::Meta->load_file('META.json');
-    my @authors = $meta->authors;
-    $Test->ok(length @authors > 0, "more than zero authors");
-    my @licenses = $meta->licenses;
-    $Test->ok(length @licenses > 0, "more than zero licenses");
-    return (\@authors, \@licenses);
+sub cpan_meta_ok {
+    foreach my $file (@META_FILES) {
+        if (-r $file) {
+            my $meta = CPAN::Meta->load_file($file);
+            return if not isa_ok($meta, 'CPAN::Meta', 'found CPAN::Meta file');
+            return slurp $file;
+        }
+    }
+    $Test->ok(0, 'found CPAN::Meta file');
+    return;
 }
+
 
 1; # Magic true value required at end of module
 __END__
@@ -82,11 +124,17 @@ statement generated from L<Software::License>.
 
 This method does all the tests described above.
 
-=head2 copyright_meta
+=head2 cpan_meta_ok
 
-This method returns the author and license as read from the module
-META data. It also runs the basic check that there is at least one
-of each.
+This method checks for the existence of a valid C<META.yml> or
+C<META.json> file and returns the text as a scalar.
+
+=head2 copyright_license_ok
+
+This returns license objects read from its first argument
+which is expected to be the contents of the C<META.yml> or
+C<META.json> files. It will give a positive test result if
+all the license objects are valid L<Software::License> objects.
 
 =head1 DIAGNOSTICS
 
