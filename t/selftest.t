@@ -1,6 +1,6 @@
 #!perl 
 
-use Test::More tests=>4;
+use Test::More tests=>5;
 
 BEGIN {
     use_ok( "Test::Copyright" );

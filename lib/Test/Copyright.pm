@@ -43,10 +43,10 @@ sub copyright_ok {
         my @classes = Software::LicenseUtils->guess_license_from_meta($meta);
         $Test->ok(length @classes > 0, "more than zero licenses");
         my @licenses = software_licenses_ok(@classes);
-
+        $Test->ok(length @licenses > 0, "more than zero recognized licenses");
     }
     else {
-        $Test->skip('No CPAN::Meta object', 2);
+        $Test->skip('No CPAN::Meta object', 3);
     }
 
     return;
