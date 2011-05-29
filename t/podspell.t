@@ -15,8 +15,7 @@ if ( $EVAL_ERROR ) {
    plan( skip_all => $msg );
 }
 
-Test::Spelling::add_stopwords(qw(   ActionDispatch
-                                    CPAN
+Test::Spelling::add_stopwords(qw(   CPAN
                                     Bamber
                                     github
                                     AnnoCPAN

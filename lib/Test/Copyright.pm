@@ -42,18 +42,26 @@ sub copyright_ok {
     if ($meta) {
         my @classes = Software::LicenseUtils->guess_license_from_meta($meta);
         $Test->ok(length @classes > 0, "more than zero licenses");
-        my $all_valid = 1;
-        my @licenses;
-        foreach my $class (@classes) {
-            if (defined $class) {
-                if ($class->require) {
-                    my $license = $class->new({holder=>$DUMMY_COPYRIGHT});
-                    if ($license and $license->isa($class)) {
-                        push @licenses, $license;
-                    }
-                    else {
-                        $all_valid = 0;
-                    }
+        my @licenses = software_licenses_ok(@classes);
+
+    }
+    else {
+        $Test->skip('No CPAN::Meta object', 2);
+    }
+
+    return;
+}
+
+sub software_licenses_ok {
+    my @classes = @_;
+    my $all_valid = 1;
+    my @licenses;
+    foreach my $class (@classes) {
+        if (defined $class) {
+            if ($class->require) {
+                my $license = $class->new({holder=>$DUMMY_COPYRIGHT});
+                if ($license and $license->isa($class)) {
+                    push @licenses, $license;
                 }
                 else {
                     $all_valid = 0;
@@ -63,13 +71,12 @@ sub copyright_ok {
                 $all_valid = 0;
             }
         }
-        $Test->ok($all_valid, 'Found a bad license object');
+        else {
+            $all_valid = 0;
+        }
     }
-    else {
-        $Test->skip('No CPAN::Meta object', 2);
-    }
-
-    return;
+    $Test->ok($all_valid, 'Found a bad license object');
+    return @licenses;
 }
 
 sub cpan_meta_ok {
@@ -129,12 +136,12 @@ This method does all the tests described above.
 This method checks for the existence of a valid C<META.yml> or
 C<META.json> file and returns the text as a scalar.
 
-=head2 copyright_license_ok
+=head2 software_licenses_ok
 
-This returns license objects read from its first argument
-which is expected to be the contents of the C<META.yml> or
-C<META.json> files. It will give a positive test result if
-all the license objects are valid L<Software::License> objects.
+This method takes a list of class names, which should be in the
+L<Software::License> namespace, and returns the corresponding
+instantiated objects with a dummy copyright holder. It also passes
+a test if and only if all the classes could be so instantiated.
 
 =head1 DIAGNOSTICS
 
