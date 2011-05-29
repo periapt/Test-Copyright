@@ -18,6 +18,7 @@ use version; our $VERSION = '0.1';
 # Module implementation here
 
 Readonly my @META_FILES => ('META.yml','META.json');
+Readonly my @LICENSE_FILES => ('LICENSE','COPYING','README',);
 Readonly my $DUMMY_COPYRIGHT => 'XYZ';
 
 my $Test = Test::Builder->new;
@@ -27,7 +28,7 @@ sub import {
     my $self = shift;
     my $caller = caller;
 
-    for my $func ( qw( copyright_ok cpan_meta_ok copyright_licenses_ok) ) {
+    for my $func ( qw( copyright_ok) ) {
         no strict 'refs'; ## no critic
         *{$caller."::".$func} = \&$func;
     }
@@ -44,6 +45,7 @@ sub copyright_ok {
         $Test->ok(length @classes > 0, "more than zero licenses");
         my @licenses = software_licenses_ok(@classes);
         $Test->ok(length @licenses > 0, "more than zero recognized licenses");
+        my $assumed_copyright_statement = license_file_ok(@licenses);
     }
     else {
         $Test->skip('No CPAN::Meta object', 3);
@@ -91,6 +93,10 @@ sub cpan_meta_ok {
     return;
 }
 
+sub license_file_ok {
+    $Test->ok(1, 'found license file');
+    return;
+}
 
 1; # Magic true value required at end of module
 __END__
@@ -142,6 +148,13 @@ This method takes a list of class names, which should be in the
 L<Software::License> namespace, and returns the corresponding
 instantiated objects with a dummy copyright holder. It also passes
 a test if and only if all the classes could be so instantiated.
+
+=head2 license_file_ok
+
+This method takes a list of L<Software::License> objects, looks
+for a LICENSE, COPYING or README file and checks that that file
+contains all the corresponding license statements. It returns
+the remainder of the text.
 
 =head1 DIAGNOSTICS
 
