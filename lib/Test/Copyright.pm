@@ -94,8 +94,16 @@ sub cpan_meta_ok {
 }
 
 sub license_file_ok {
-    $Test->ok(1, 'found license file');
-    return;
+    my @licenses = @_;
+    my $found_file = undef;
+    foreach my $file (@LICENSE_FILES) {
+        if (-r $file) {
+            $found_file = slurp $file;
+            last;
+        }
+    }
+    $Test->ok($found_file, 'found license file');
+    return $found_file;
 }
 
 1; # Magic true value required at end of module
