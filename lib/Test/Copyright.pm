@@ -164,7 +164,7 @@ sub _remove_license {
     my $file_contents = shift;
     my $license_text = shift;
     my $index = index $file_contents, $license_text;
-    return undef if $index < 0;
+    return if $index < 0;
     my $remainder = substr($file_contents, 0, $index);
     $remainder .= substr($file_contents, $index+length $license_text);
     return $remainder;
@@ -227,6 +227,12 @@ This method takes a list of L<Software::License> objects, looks
 for a LICENSE, COPYING or README file and checks that that file
 contains all the corresponding license statements. It returns
 the remainder of the text.
+
+=head2 verify_license
+
+This method is responsible for checking that a given license text is 
+to be found in a given string. On success it returns the remainder of the
+text. On failure it returns undef.
 
 =head1 DIAGNOSTICS
 

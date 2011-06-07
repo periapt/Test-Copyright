@@ -11,7 +11,6 @@ my $builder = Module::Build->new(
         'Test::More' => 0,
     },
     requires => {
-        'version'       => 0,
         'CPAN::Meta'    => 0,
         'Software::LicenseUtils' => 0,
         'Perl6::Slurp'  => 0,
