@@ -1,4 +1,11 @@
 blib*
+Makefile.PL
+MYMETA.json
+MYMETA.yml
+META.json
+META.yml
+README
+*.bak
 Makefile
 Makefile.old
 Build
