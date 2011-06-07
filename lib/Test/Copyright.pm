@@ -13,7 +13,7 @@ use Readonly;
 use Perl6::Slurp;
 use UNIVERSAL::require;
 
-use version; our $VERSION = '0.1';
+our $VERSION = '0.1';
 
 # Module implementation here
 
