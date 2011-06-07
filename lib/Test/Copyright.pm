@@ -99,11 +99,37 @@ sub license_file_ok {
     foreach my $file (@LICENSE_FILES) {
         if (-r $file) {
             $found_file = slurp $file;
+            $Test->diag("found license file: $file");
             last;
         }
     }
     $Test->ok($found_file, 'found license file');
+    if ($found_file) {
+        foreach my $license (@licenses) {
+            $found_file = verify_license($found_file, $license);
+        }
+    }
     return $found_file;
+}
+
+sub verify_license {
+    my $file_contents = shift;
+    my $license = shift;
+    my $holder = $license->holder;
+    my $year = $license->year;
+    my $dummy_copyright = "This software is copyright (c) $year by $holder.\n";
+    my $full_text = _purge_dummy($license->fulltext, $dummy_copyright);
+
+    pass;
+    return $file_contents;
+}
+
+sub _purge_dummy {
+    my $text = shift;
+    my $dummy_copyright = shift;
+    croak "Cannot find dummy copyright: ".substr($text, 0, 100) 
+        if $dummy_copyright ne substr($text, 0, length $dummy_copyright);
+    return substr($text, 1+length $dummy_copyright);
 }
 
 1; # Magic true value required at end of module
