@@ -83,6 +83,9 @@ sub copyright_ok {
         my $copyright_details = undef;
         if ($license_file_contents) {
             $copyright_details = parse_copyright($license_file_contents);
+            foreach my $file (_find_files_to_check()) {
+                check_file_for_copyright($file, $copyright_details);
+            }
         }
         else {
             fail('Parse copyright details');
@@ -118,7 +121,7 @@ sub software_licenses_ok {
             $all_valid = 0;
         }
     }
-    $Test->ok($all_valid, 'Found a bad license object');
+    $Test->ok($all_valid, 'Found a good license object');
     return @licenses;
 }
 
@@ -222,7 +225,7 @@ sub parse_copyright {
             # TODO pick details for individual files
         }
     }
-    ok($copyright, "Found copyright details");
+    ok(exists $copyright->{$DEFAULT}, "Found default copyright details");
     return $copyright;
 }
 
@@ -260,8 +263,16 @@ sub parse_copyright_line {
     return $details;
 }
 
+sub check_file_for_copyright {
+    my $file = shift;
+    my $copyright = shift;
+    pass($file);
+    return;
+}
 
-
+sub _find_files_to_check {
+    return;
+}
 
 1; # Magic true value required at end of module
 __END__
