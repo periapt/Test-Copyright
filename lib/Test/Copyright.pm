@@ -21,6 +21,7 @@ our $VERSION = '0.1';
 
 my $nameparse = Lingua::EN::NameParse->new;
 
+Readonly my $DEFAULT => '';
 Readonly my @META_FILES => ('META.yml','META.json');
 Readonly my @LICENSE_FILES => ('LICENSE','COPYING','README');
 Readonly my $DUMMY_COPYRIGHT => 'XYZ';
@@ -215,14 +216,29 @@ sub parse_copyright {
     my @lines = split /\n/, $license_file_contents;
     my $copyright = undef;
     foreach my $line (@lines) {
-        if ($copyright = parse_copyright_line($line)) {
-            diag "(C) $copyright->{initial_year}-$copyright->{final_year}, $copyright->{holder}";
-            # TODO allow multiple holders with different years
+        if (my $detail = parse_copyright_line($line)) {
+            diag "(C) $detail->{initial_year}-$detail->{final_year}, $detail->{holder}";
+            $copyright = _push_copyright($copyright, $DEFAULT, $detail)
             # TODO pick details for individual files
-            last;
         }
     }
     ok($copyright, "Found copyright details");
+    return $copyright;
+}
+
+sub _push_copyright {
+    my $copyright = shift;
+    my $file = shift;
+    my $detail = shift;
+    if (not defined $copyright) {
+        $copyright = {};
+    }
+    if (exists $copyright->{$file}) {
+        push @{$copyright->{$file}}, $detail;
+    }
+    else {
+        $copyright->{$file} = [$detail];
+    }
     return $copyright;
 }
 
@@ -231,8 +247,8 @@ sub parse_copyright_line {
     my $details = undef;
     if ($line =~ $COPYRIGHT_REGEX) {
         $details = {};
-        $details->{initial_year} = $1;
         $details->{final_year} = $2;
+        $details->{initial_year} = $1 || $details->{final_year};
         $nameparse->parse($3);
         my %properties = $nameparse->properties;
         $details->{holder} = $nameparse->case_all;
