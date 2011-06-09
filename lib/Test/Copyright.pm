@@ -14,8 +14,9 @@ use Perl6::Slurp;
 use UNIVERSAL::require;
 use Lingua::EN::NameParse;
 use Email::Address;
+use File::Spec;
 
-our $VERSION = '0.1';
+our $VERSION = '0.0_1';
 
 # Module implementation here
 
@@ -54,6 +55,21 @@ Readonly my $COPYRIGHT_REGEX =>
         ([^\n\r]+)              # Copyright holder
         $
     }xms;
+
+# This list was copied from Test::Pod.
+# Copyright 2006-2010, Andy Lester. Some Rights Reserved.
+Readonly my %IGNORE_DIRS => (
+    '.bzr' => 'Bazaar',
+    '.git' => 'Git',
+    '.hg'  => 'Mercurial',
+    '.pc'  => 'quilt',
+    '.svn' => 'Subversion',
+    CVS    => 'CVS',
+    RCS    => 'RCS',
+    SCCS   => 'SCCS',
+    _darcs => 'darcs',
+    _sgbak => 'Vault/Fortress',
+);
 
 my $Test = Test::Builder->new;
 my %copyright_data = ();
@@ -270,9 +286,60 @@ sub check_file_for_copyright {
     return;
 }
 
+# This function is copied from Test::Pod.
 sub _find_files_to_check {
+    my @queue = @_ ? @_ : _starting_points();
+    my @pod = ();
+
+    while ( @queue ) {
+        my $file = shift @queue;
+        if ( -d $file ) {
+            local *DH;
+            opendir DH, $file or next;
+            my @newfiles = readdir DH;
+            closedir DH;
+
+            @newfiles = File::Spec->no_upwards( @newfiles );
+            @newfiles = grep { not exists $IGNORE_DIRS{ $_ } } @newfiles;
+
+            foreach my $newfile (@newfiles) {
+                my $filename = File::Spec->catfile( $file, $newfile );
+                if ( -f $filename ) {
+                    push @queue, $filename;
+                }
+                else {
+                    push @queue, File::Spec->catdir( $file, $newfile );
+                }
+            }
+        }
+        if ( -f $file ) {
+            push @pod, $file if _is_perl( $file );
+        }
+    } # while
+    return @pod;
+}
+
+sub _starting_points {
+    return 'blib' if -e 'blib';
+    return 'lib';
+}
+
+sub _is_perl {
+    my $file = shift;
+
+    return 1 if $file =~ /\.PL$/;
+    return 1 if $file =~ /\.p(?:l|m|od)$/;
+    return 1 if $file =~ /\.t$/;
+
+    open my $fh, '<', $file or return;
+    my $first = <$fh>;
+    close $fh;
+
+    return 1 if defined $first && ($first =~ /(?:^#!.*perl)|--\*-Perl-\*--/);
+
     return;
 }
+
 
 1; # Magic true value required at end of module
 __END__
@@ -283,7 +350,7 @@ Test::Copyright - Test that a module has good license information
 
 =head1 VERSION
 
-This document describes Test::Copyright version 0.1
+This document describes Test::Copyright version 0.0_1
 
 =head1 SYNOPSIS
 
@@ -349,6 +416,8 @@ also include an initial year.
 This function takes a string representing the license file contents
 and returns a data structure representing the copyright information
 stated in the file.
+
+=head2 check_file_for_copyright
 
 =head1 DIAGNOSTICS
 
