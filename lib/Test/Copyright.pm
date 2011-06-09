@@ -12,10 +12,14 @@ use Software::LicenseUtils;
 use Readonly;
 use Perl6::Slurp;
 use UNIVERSAL::require;
+use Lingua::EN::NameParse;
+use Email::Address;
 
 our $VERSION = '0.1';
 
 # Module implementation here
+
+my $nameparse = Lingua::EN::NameParse->new;
 
 Readonly my @META_FILES => ('META.yml','META.json');
 Readonly my @LICENSE_FILES => ('LICENSE','COPYING','README');
@@ -211,12 +215,8 @@ sub parse_copyright {
     my @lines = split /\n/, $license_file_contents;
     my $copyright = undef;
     foreach my $line (@lines) {
-        if ($line =~ $COPYRIGHT_REGEX) {
-            $copyright = {
-                initial_year=>$1,
-                final_year=>$2,
-                holder=>$3
-            };
+        if ($copyright = parse_copyright_line($line)) {
+            diag "(C) $copyright->{initial_year}-$copyright->{final_year}, $copyright->{holder}";
             # TODO allow multiple holders with different years
             # TODO pick details for individual files
             last;
@@ -225,6 +225,27 @@ sub parse_copyright {
     ok($copyright, "Found copyright details");
     return $copyright;
 }
+
+sub parse_copyright_line {
+    my $line = shift;
+    my $details = undef;
+    if ($line =~ $COPYRIGHT_REGEX) {
+        $details = {};
+        $details->{initial_year} = $1;
+        $details->{final_year} = $2;
+        $nameparse->parse($3);
+        my %properties = $nameparse->properties;
+        $details->{holder} = $nameparse->case_all;
+        if ($properties{non_matching}
+            =~ m{\<($Email::Address::addr_spec)\>}xms) {
+            $details->{holder} .= " <$1>";
+        }
+    }
+    return $details;
+}
+
+
+
 
 1; # Magic true value required at end of module
 __END__
@@ -263,32 +284,44 @@ statement generated from L<Software::License>.
 
 =head2 copyright_ok
 
-This method does all the tests described above.
+This function does all the tests described above.
 
 =head2 cpan_meta_ok
 
-This method checks for the existence of a valid C<META.yml> or
+This function checks for the existence of a valid C<META.yml> or
 C<META.json> file and returns the text as a scalar.
 
 =head2 software_licenses_ok
 
-This method takes a list of class names, which should be in the
+This function takes a list of class names, which should be in the
 L<Software::License> namespace, and returns the corresponding
 instantiated objects with a dummy copyright holder. It also passes
 a test if and only if all the classes could be so instantiated.
 
 =head2 license_file_ok
 
-This method takes a list of L<Software::License> objects, looks
+This function takes a list of L<Software::License> objects, looks
 for a LICENSE, COPYING or README file and checks that that file
 contains all the corresponding license statements. It returns
 the remainder of the text.
 
 =head2 verify_license
 
-This method is responsible for checking that a given license text is 
+This function is responsible for checking that a given license text is 
 to be found in a given string. On success it returns the remainder of the
 text. On failure it returns undef.
+
+=head2 parse_copyright_line
+
+This function takes a line and attempts to extract a copyright statement
+from it. This must include a final year and a copyright holder but may
+also include an initial year.
+
+=head2 parse_copyright
+
+This function takes a string representing the license file contents
+and returns a data structure representing the copyright information
+stated in the file.
 
 =head1 DIAGNOSTICS
 

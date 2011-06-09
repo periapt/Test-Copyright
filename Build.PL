@@ -16,6 +16,8 @@ my $builder = Module::Build->new(
         'Perl6::Slurp'  => 0,
         'Readonly'      => 0,
         'UNIVERSAL::require' => 0,
+        'Lingua::EN::NameParse' => 0,
+        'Email::Address' => 0,
     },
     configure_requires => {
         'Module::Build' => '0.38',
