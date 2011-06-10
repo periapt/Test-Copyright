@@ -17,6 +17,7 @@ if ( $EVAL_ERROR ) {
 
 Test::Spelling::add_stopwords(qw(   CPAN
                                     Bamber
+                                    Barratt
                                     github
                                     AnnoCPAN
                                     RT

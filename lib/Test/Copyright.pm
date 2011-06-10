@@ -34,10 +34,11 @@ Readonly my %LICENSE_SPECIALS => (
 );
 
 # This line draws inspiration from licensecheck.
-# (C) 2007, 2008 Adam D. Barratt
+# (C) 2007-2008, Adam D. Barratt
 Readonly my $COPYRIGHT_REGEX =>
     qr{
         ^                       # Beginning of line
+        \#?                     # Can be commented out
         \s*                     # Arbitrary amount of space
 	(?:
             [Cc]opyright	# The full word
@@ -89,18 +90,18 @@ sub import {
 
 sub copyright_ok {
     my $name = @_ ? shift : "Copyright test";
-    my $meta = cpan_meta_ok();
+    my $meta = _cpan_meta_ok();
     if ($meta) {
         my @classes = Software::LicenseUtils->guess_license_from_meta($meta);
         $Test->ok(length @classes > 0, "more than zero licenses");
-        my @licenses = software_licenses_ok(@classes);
+        my @licenses = _software_licenses_ok(@classes);
         $Test->ok(length @licenses > 0, "more than zero recognized licenses");
-        my $license_file_contents = license_file_ok(@licenses);
+        my $license_file_contents = _license_file_ok(@licenses);
         my $copyright_details = undef;
         if ($license_file_contents) {
-            $copyright_details = parse_copyright($license_file_contents);
+            $copyright_details = _parse_copyright($license_file_contents);
             foreach my $file (_find_files_to_check()) {
-                check_file_for_copyright($file, $copyright_details);
+                _check_file_for_copyright($file, $copyright_details);
             }
         }
         else {
@@ -114,7 +115,7 @@ sub copyright_ok {
     return;
 }
 
-sub software_licenses_ok {
+sub _software_licenses_ok {
     my @classes = @_;
     my $all_valid = 1;
     my @licenses;
@@ -141,7 +142,7 @@ sub software_licenses_ok {
     return @licenses;
 }
 
-sub cpan_meta_ok {
+sub _cpan_meta_ok {
     foreach my $file (@META_FILES) {
         if (-r $file) {
             my $meta = CPAN::Meta->load_file($file);
@@ -153,7 +154,7 @@ sub cpan_meta_ok {
     return;
 }
 
-sub license_file_ok {
+sub _license_file_ok {
     my @licenses = @_;
     my $found_file = undef;
     my $file_name = undef;
@@ -167,13 +168,13 @@ sub license_file_ok {
     $Test->ok($found_file, "found license file: $file_name");
     if ($found_file) {
         foreach my $license (@licenses) {
-            $found_file = verify_license($found_file, $license, $file_name);
+            $found_file = _verify_license($found_file, $license, $file_name);
         }
     }
     return $found_file;
 }
 
-sub verify_license {
+sub _verify_license {
     my $file_contents = shift;
     my $license = shift;
     my $file_name = shift;
@@ -230,12 +231,12 @@ sub _remove_license {
     return $remainder;
 }
 
-sub parse_copyright {
+sub _parse_copyright {
     my $license_file_contents = shift;
     my @lines = split /\n/, $license_file_contents;
     my $copyright = undef;
     foreach my $line (@lines) {
-        if (my $detail = parse_copyright_line($line)) {
+        if (my $detail = _parse_copyright_line($line)) {
             diag "(C) $detail->{initial_year}-$detail->{final_year}, $detail->{holder}";
             $copyright = _push_copyright($copyright, $DEFAULT, $detail)
             # TODO pick details for individual files
@@ -249,19 +250,20 @@ sub _push_copyright {
     my $copyright = shift;
     my $file = shift;
     my $detail = shift;
+    my $holder = delete $detail->{holder};
     if (not defined $copyright) {
         $copyright = {};
     }
     if (exists $copyright->{$file}) {
-        push @{$copyright->{$file}}, $detail;
+        $copyright->{$file}->{$holder} = $detail;
     }
     else {
-        $copyright->{$file} = [$detail];
+        $copyright->{$file} = {$holder=>$detail};
     }
     return $copyright;
 }
 
-sub parse_copyright_line {
+sub _parse_copyright_line {
     my $line = shift;
     my $details = undef;
     if ($line =~ $COPYRIGHT_REGEX) {
@@ -279,11 +281,44 @@ sub parse_copyright_line {
     return $details;
 }
 
-sub check_file_for_copyright {
+sub _check_file_for_copyright {
     my $file = shift;
     my $copyright = shift;
-    pass($file);
+    my $file_contents = slurp $file;
+    my @lines = split /\n/, $file_contents;
+    my $file_has_copyright = 0;
+    my $all_copyright_known = 1;
+    foreach my $line (@lines) {
+        if (my $detail = _parse_copyright_line($line)) {
+            $all_copyright_known
+               &&= _check_copyright_details($file, $detail, $copyright);
+            $file_has_copyright = 1;
+        }
+    }
+    ok($file_has_copyright, "File $file has copyright statement");
+    ok($all_copyright_known, "Copyright for $file is described centrally");
     return;
+}
+
+sub _check_copyright_details {
+    my $file = shift;
+    my $detail = shift;
+    my $copyright = shift;
+    my $holder = $detail->{holder};
+    if (not exists $copyright->{$DEFAULT}->{$holder}) {
+        diag "Unlisted copyright holder: $holder [$file]";
+        return 0;
+    }
+    my $years = $copyright->{$DEFAULT}->{$holder};
+    if ($detail->{initial_year} < $years->{initial_year}) {
+        diag "Year mismatch: ($detail->{initial_year}, $holder) [$file]";
+        return 0;
+    }
+    if ($detail->{final_year} > $years->{final_year}) {
+        diag "Year mismatch: ($detail->{final_year}, $holder) [$file]";
+        return 0;
+    }
+    return 1;
 }
 
 # This function is copied from Test::Pod.
@@ -380,45 +415,6 @@ statement generated from L<Software::License>.
 
 This function does all the tests described above.
 
-=head2 cpan_meta_ok
-
-This function checks for the existence of a valid C<META.yml> or
-C<META.json> file and returns the text as a scalar.
-
-=head2 software_licenses_ok
-
-This function takes a list of class names, which should be in the
-L<Software::License> namespace, and returns the corresponding
-instantiated objects with a dummy copyright holder. It also passes
-a test if and only if all the classes could be so instantiated.
-
-=head2 license_file_ok
-
-This function takes a list of L<Software::License> objects, looks
-for a LICENSE, COPYING or README file and checks that that file
-contains all the corresponding license statements. It returns
-the remainder of the text.
-
-=head2 verify_license
-
-This function is responsible for checking that a given license text is 
-to be found in a given string. On success it returns the remainder of the
-text. On failure it returns undef.
-
-=head2 parse_copyright_line
-
-This function takes a line and attempts to extract a copyright statement
-from it. This must include a final year and a copyright holder but may
-also include an initial year.
-
-=head2 parse_copyright
-
-This function takes a string representing the license file contents
-and returns a data structure representing the copyright information
-stated in the file.
-
-=head2 check_file_for_copyright
-
 =head1 DIAGNOSTICS
 
 =for author to fill in:
@@ -506,6 +502,8 @@ Nicholas Bamber  C<< <nicholas@periapt.co.uk> >>
 =head1 LICENCE AND COPYRIGHT
 
 Copyright (c) 2011, Nicholas Bamber C<< <nicholas@periapt.co.uk> >>. All rights reserved.
+Copyright (c) 2007-2008, Adam D. Barratt [portions]
+Copyright (c) 2006-2010, Andy Lester [portions]
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.

@@ -22,7 +22,6 @@ my $builder = Module::Build->new(
     configure_requires => {
         'Module::Build' => '0.38',
     },   
-    create_readme=>1,
     create_makefile_pl => 'traditional',
     add_to_cleanup      => [ 'Test-Copyright-*' ],
 );
