@@ -22,8 +22,15 @@ my $builder = Module::Build->new(
     configure_requires => {
         'Module::Build' => '0.38',
     },   
+    create_readme=>1,
     create_makefile_pl => 'traditional',
     add_to_cleanup      => [ 'Test-Copyright-*' ],
+    meta_merge => {
+        resources => {
+            repository =>
+'http://github.com/periapt/Test-Copyright/tree',
+        },
+    },
 );
 
 $builder->create_build_script();

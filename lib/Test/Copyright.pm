@@ -37,7 +37,7 @@ Readonly my %LICENSE_SPECIALS => (
 # (C) 2007-2008, Adam D. Barratt
 Readonly my $COPYRIGHT_REGEX =>
     qr{
-        ^                       # Beginning of line
+        \A                       # Beginning of line
         \#?                     # Can be commented out
         \s*                     # Arbitrary amount of space
 	(?:
@@ -54,7 +54,7 @@ Readonly my $COPYRIGHT_REGEX =>
         (\d{4})                 # Actual year
         \,?\s+                  # Comma and space
         ([^\n\r]+)              # Copyright holder
-        $
+       \z 
     }xms;
 
 # This list was copied from Test::Pod.
@@ -94,7 +94,7 @@ sub copyright_ok {
         my @classes = Software::LicenseUtils->guess_license_from_meta($meta);
         $Test->ok(length @classes > 0, "more than zero licenses");
         my @licenses = _software_licenses_ok(@classes);
-        $Test->ok(length @licenses > 0, "more than zero recognized licenses");
+        $Test->ok(length @licenses > 0, "more than zero recognised licenses");
         my $license_file_contents = _license_file_ok(@licenses);
         my $copyright_details = undef;
         if ($license_file_contents) {
@@ -236,12 +236,13 @@ sub _parse_copyright {
     my $copyright = undef;
     foreach my $line (@lines) {
         if (my $detail = _parse_copyright_line($line)) {
-            diag "(C) $detail->{initial_year}-$detail->{final_year}, $detail->{holder}";
+#            diag "(C) $detail->{initial_year}-$detail->{final_year}, $detail->{holder}";
             $copyright = _push_copyright($copyright, $DEFAULT, $detail)
             # TODO pick details for individual files
         }
     }
     ok(exists $copyright->{$DEFAULT}, "Found default copyright details");
+    _verify_copyright_final_year($copyright);
     return $copyright;
 }
 
@@ -320,6 +321,19 @@ sub _check_copyright_details {
     return 1;
 }
 
+sub _verify_copyright_final_year {
+    my $copyright = shift;
+    my $year = undef;
+    foreach my $author (keys %{$copyright->{$DEFAULT}}) {
+        my $test = $copyright->{$DEFAULT}->{$author}->{final_year};
+        if (not defined $year or $test > $year) {
+            $year = $test;
+        }
+    }
+    my @localtime = localtime();
+    is($year, 1900+$localtime[5], 'final copyright year is uptodate');
+}
+
 # This function is copied from Test::Pod.
 sub _find_files_to_check {
     my @queue = @_ ? @_ : _starting_points();
@@ -378,6 +392,10 @@ sub _is_perl {
 1; # Magic true value required at end of module
 __END__
 
+=head1 NAME
+
+Test::Copyright - Verify the consistency of license and copyright information
+
 =head1 VERSION
 
 This document describes Test::Copyright version 0.0_1
@@ -392,7 +410,7 @@ This document describes Test::Copyright version 0.0_1
 
 Many CPAN authors are enthusiastic in their wish to contribute
 to the open source movement, but relatively unaware of the need
-for clear licensing and copyright information.
+for clear and consistent licensing and copyright information.
 This module attempts to check the quality of a module from the copyright
 and license perspectives. The following tests are applied:
 
@@ -403,7 +421,7 @@ and license perspectives. The following tests are applied:
 =item That the said L<CPAN::Meta> object contains at least one license.
 
 =item That the said L<CPAN::Meta> object contains at least one license
-recognized by L<Software::License>.
+recognised by L<Software::License>.
 
 =item That we can read at least one of LICENSE, COPYING or README.
 
@@ -417,12 +435,12 @@ license texts) contains at least one copyright statement that can
 be inferred to be the default copyright statement for the whole package.
 
 =item That the said default copyright statement has at least one final year 
-that matches the current year. [TODO]
+that matches the current year.
 
 =item That every perl file has at least one copyright statement.
 
 =item That every copyright statement in every perl file is consistent
-with the centralized copyright information.
+with the centralised copyright information.
 
 =back
 
@@ -434,30 +452,20 @@ This function does all the tests described above.
 
 =head1 DIAGNOSTICS
 
-=for author to fill in:
-    List every single error and warning message that the module can
-    generate (even the ones that will "never happen"), with a full
-    explanation of each problem, one or more likely causes, and any
-    suggested remedies.
-
 =over
 
-=item C<< Error message here, perhaps with %s placeholders >>
+=item C<< Cannot find dummy copyright: %s >>
 
-[Description of error here]
-
-=item C<< Another error message here >>
-
-[Description of error here]
-
-[Et cetera, et cetera]
+Because L<Software::License> places the copyright statement in its
+output, we need to extract it for our purposes. This error is raised
+if we fail to do so.
 
 =back
 
-
 =head1 CONFIGURATION AND ENVIRONMENT
 
-Test::Copyright requires no configuration files or environment variables.
+Test::Copyright requires no configuration files or environment variables
+and in fact at present is stubbornly resistant to any sort of configuration.
 
 =head1 INCOMPATIBILITIES
 
@@ -480,6 +488,19 @@ modules rather than because it is most appropriate.
 
 There has been no test coverage analysis.
 
+Some module quality test modules know how many tests they will actually
+run. This does not and you have to put that in yourself or take
+alternative steps.
+
+A project such as this is inherently fragile, needing as it does to parse
+texts written for lawyers rather than well-intentioned computers.
+It would be a lot easier if all the perl software tools generated copyright
+and license texts intended for both categories of reader - and perhaps even
+humans as well.
+
+Perhaps the copyright extraction part of the code could be more usefully
+in a separate module.
+
 Please report any bugs or feature requests to
 C<bug-test-copyright@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
@@ -496,8 +517,10 @@ Nicholas Bamber  C<< <nicholas@periapt.co.uk> >>
 =head1 LICENCE AND COPYRIGHT
 
 Copyright (c) 2011, Nicholas Bamber C<< <nicholas@periapt.co.uk> >>. All rights reserved.
-Copyright (c) 2007-2008, Adam D. Barratt [portions]
-Copyright (c) 2006-2010, Andy Lester [portions]
+
+Copyright (c) 2007-2008, Adam D. Barratt [one regular expression copied from C<licensecheck>]
+
+Copyright (c) 2006-2010, Andy Lester [a number of functions copied from Test::Pod]
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.
